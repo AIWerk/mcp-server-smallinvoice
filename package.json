@@ -29,6 +29,7 @@
   },
   "homepage": "https://aiwerkmcp.com",
   "bugs": { "url": "https://github.com/AIWerk/mcp-server-smallinvoice/issues" },
+  "publishConfig": { "access": "public" },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.19.1",
     "zod": "^3.25.76"
