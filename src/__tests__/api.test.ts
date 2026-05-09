@@ -77,6 +77,36 @@ describe('SmallinvoiceClient.get', () => {
     await expect(client.get('/auth/owner')).rejects.toThrow(SmallinvoiceAuthError);
   });
 
+  it('401 retry triggers actual refresh even when token file expires_at is future', async () => {
+    // Regression for stale-aware double-check: token file has a valid future expiry but the
+    // access token was already rejected (401). Without staleAccessToken propagation the
+    // double-check would short-circuit and reuse the rejected token → infinite 401 loop.
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      // First API call → 401 (stale token rejected)
+      .mockResolvedValueOnce(new Response('', { status: 401, statusText: 'Unauthorized' }))
+      // Refresh endpoint → new tokens
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ access_token: 'new-token', refresh_token: 'new-refresh', expires_in: 43200 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ))
+      // Retry API call → success
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ ok: true }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ));
+
+    // mockValidTokenFile() (from beforeEach) wrote access_token='test-access-token', expires_at=future
+    const client = new SmallinvoiceClient();
+    const result = await client.get<{ ok: boolean }>('/auth/owner');
+    expect(result).toEqual({ ok: true });
+
+    // Three fetch calls: API(401), refresh endpoint, API retry(200)
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.smallinvoice.com/v2/auth/access-tokens');
+    const retryHeaders = fetchMock.mock.calls[2][1]?.headers as Headers;
+    expect(retryHeaders.get('Authorization')).toBe('Bearer new-token');
+  });
+
   it('throws SmallinvoiceTimeoutError on timeout', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
     const client = new SmallinvoiceClient();

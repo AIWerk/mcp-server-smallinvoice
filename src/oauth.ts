@@ -138,6 +138,7 @@ export async function getAccessToken(
   clientId: string,
   clientSecret: string,
   forceRefresh = false,
+  staleAccessToken?: string,
 ): Promise<string> {
   if (!forceRefresh) {
     const tokens = readTokenFile();
@@ -152,18 +153,28 @@ export async function getAccessToken(
   }
 
   if (!refreshInFlight) {
-    refreshInFlight = doRefresh(clientId, clientSecret).finally(() => {
+    refreshInFlight = doRefresh(clientId, clientSecret, staleAccessToken).finally(() => {
       refreshInFlight = null;
     });
   }
   return refreshInFlight;
 }
 
-async function doRefresh(clientId: string, clientSecret: string): Promise<string> {
+async function doRefresh(
+  clientId: string,
+  clientSecret: string,
+  staleAccessToken?: string,
+): Promise<string> {
   return withRefreshLock(async () => {
-    // Double-check: another OS process may have already refreshed while we waited for the lock
+    // Cross-process optimisation: if another process already refreshed, reuse their token.
+    // But reject if the file token is the same stale value that just 401'd — it was already
+    // rejected by the API, so using it again would loop infinitely.
     const fresh = readTokenFile();
-    if (fresh?.access_token && Date.now() < fresh.expires_at - 60_000) {
+    if (
+      fresh?.access_token &&
+      Date.now() < fresh.expires_at - 60_000 &&
+      fresh.access_token !== staleAccessToken
+    ) {
       return fresh.access_token;
     }
 

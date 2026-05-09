@@ -112,9 +112,10 @@ async function fetchWithAuth(
   let accessToken = await getAccessToken(clientId, clientSecret);
   let response = await doFetch(method, path, body, query, accessToken, timeoutMs);
 
-  // 401 retry once — force a fresh token refresh (handles env-only setup where file token is absent)
+  // 401 retry once — force refresh, passing the rejected token so the double-check inside
+  // withRefreshLock skips it even when expires_at is still in the future.
   if (response.status === 401) {
-    accessToken = await getAccessToken(clientId, clientSecret, true);
+    accessToken = await getAccessToken(clientId, clientSecret, true, accessToken);
     response = await doFetch(method, path, body, query, accessToken, timeoutMs);
   }
 
