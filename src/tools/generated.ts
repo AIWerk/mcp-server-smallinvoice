@@ -25,15 +25,15 @@ export const listProductCategoriesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listProductCategories(client: SmallinvoiceClient, args: z.infer<typeof listProductCategoriesInput>): Promise<unknown> {
   return client.get('/catalog/products/categories', args as Record<string, string | number | boolean | undefined | null>);
 }
 
 export const createProductCategoryInput = z.object({
-  name: z.string(),
-  accounting_account_number: z.string().optional(),
+  name: z.string().describe('Name'),
+  accounting_account_number: z.string().optional().describe('Accounting account number'),
 });
 export async function createProductCategory(client: SmallinvoiceClient, args: z.infer<typeof createProductCategoryInput>): Promise<unknown> {
   return client.post('/catalog/products/categories', args);
@@ -44,15 +44,15 @@ export const listServiceCategoriesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listServiceCategories(client: SmallinvoiceClient, args: z.infer<typeof listServiceCategoriesInput>): Promise<unknown> {
   return client.get('/catalog/services/categories', args as Record<string, string | number | boolean | undefined | null>);
 }
 
 export const createServiceCategoryInput = z.object({
-  name: z.string(),
-  accounting_account_number: z.string().optional(),
+  name: z.string().describe('Name'),
+  accounting_account_number: z.string().optional().describe('Accounting account number'),
 });
 export async function createServiceCategory(client: SmallinvoiceClient, args: z.infer<typeof createServiceCategoryInput>): Promise<unknown> {
   return client.post('/catalog/services/categories', args);
@@ -69,8 +69,8 @@ export async function getProductCategory(client: SmallinvoiceClient, args: z.inf
 
 export const updateProductCategoryInput = z.object({
   category_id: z.number().int().describe('category ID'),
-  name: z.string().optional(),
-  accounting_account_number: z.string().optional(),
+  name: z.string().optional().describe('Name'),
+  accounting_account_number: z.string().optional().describe('Accounting account number'),
 });
 export async function updateProductCategory(client: SmallinvoiceClient, args: z.infer<typeof updateProductCategoryInput>): Promise<unknown> {
   const { category_id, ...body } = args;
@@ -88,8 +88,8 @@ export async function getServiceCategory(client: SmallinvoiceClient, args: z.inf
 
 export const updateServiceCategoryInput = z.object({
   category_id: z.number().int().describe('category ID'),
-  name: z.string().optional(),
-  accounting_account_number: z.string().optional(),
+  name: z.string().optional().describe('Name'),
+  accounting_account_number: z.string().optional().describe('Accounting account number'),
 });
 export async function updateServiceCategory(client: SmallinvoiceClient, args: z.infer<typeof updateServiceCategoryInput>): Promise<unknown> {
   const { category_id, ...body } = args;
@@ -115,7 +115,7 @@ export const listUnitsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listUnits(client: SmallinvoiceClient, args: z.infer<typeof listUnitsInput>): Promise<unknown> {
   return client.get('/catalog/configuration/units', args as Record<string, string | number | boolean | undefined | null>);
@@ -135,23 +135,23 @@ export const listProductsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listProducts(client: SmallinvoiceClient, args: z.infer<typeof listProductsInput>): Promise<unknown> {
   return client.get('/catalog/products', args as Record<string, string | number | boolean | undefined | null>);
 }
 
 export const createProductInput = z.object({
-  number: z.string().optional(),
-  name: z.string(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  category_id: z.number().int().optional(),
-  including_vat: z.boolean(),
-  vat: z.number(),
-  unit_id: z.number().int(),
-  price: z.number(),
-  price_purchase: z.number().optional(),
+  number: z.string().optional().describe('Number'),
+  name: z.string().describe('Name'),
+  description: z.string().optional().describe('Description'),
+  notes: z.string().optional().describe('Notes'),
+  category_id: z.number().int().optional().describe('Category id'),
+  including_vat: z.boolean().describe('Including vat'),
+  vat: z.number().describe('Vat'),
+  unit_id: z.number().int().describe('Unit id'),
+  price: z.number().describe('Price'),
+  price_purchase: z.number().optional().describe('Price purchase'),
   default_amount: z.number().int().optional().describe('default value: 1'),
   custom_fields: z.array(z.unknown()).optional().describe('custom fields values'),
 });
@@ -170,17 +170,17 @@ export async function getProduct(client: SmallinvoiceClient, args: z.infer<typeo
 
 export const updateProductInput = z.object({
   product_id: z.number().int().describe('product ID'),
-  number: z.string().optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  category_id: z.number().int().optional(),
-  including_vat: z.boolean().optional(),
-  vat: z.number().optional(),
-  unit_id: z.number().int().optional(),
-  price: z.number().optional(),
-  price_purchase: z.number().optional(),
-  default_amount: z.number().int().optional(),
+  number: z.string().optional().describe('Number'),
+  name: z.string().optional().describe('Name'),
+  description: z.string().optional().describe('Description'),
+  notes: z.string().optional().describe('Notes'),
+  category_id: z.number().int().optional().describe('Category id'),
+  including_vat: z.boolean().optional().describe('Including vat'),
+  vat: z.number().optional().describe('Vat'),
+  unit_id: z.number().int().optional().describe('Unit id'),
+  price: z.number().optional().describe('Price'),
+  price_purchase: z.number().optional().describe('Price purchase'),
+  default_amount: z.number().int().optional().describe('Default amount'),
   custom_fields: z.array(z.unknown()).optional().describe('custom fields values'),
 });
 export async function updateProduct(client: SmallinvoiceClient, args: z.infer<typeof updateProductInput>): Promise<unknown> {
@@ -200,22 +200,22 @@ export const listServicesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listServices(client: SmallinvoiceClient, args: z.infer<typeof listServicesInput>): Promise<unknown> {
   return client.get('/catalog/services', args as Record<string, string | number | boolean | undefined | null>);
 }
 
 export const createServiceInput = z.object({
-  number: z.string().optional(),
-  name: z.string(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  category_id: z.number().int().optional(),
-  including_vat: z.boolean(),
-  vat: z.number(),
-  unit_id: z.number().int(),
-  price: z.number(),
+  number: z.string().optional().describe('Number'),
+  name: z.string().describe('Name'),
+  description: z.string().optional().describe('Description'),
+  notes: z.string().optional().describe('Notes'),
+  category_id: z.number().int().optional().describe('Category id'),
+  including_vat: z.boolean().describe('Including vat'),
+  vat: z.number().describe('Vat'),
+  unit_id: z.number().int().describe('Unit id'),
+  price: z.number().describe('Price'),
   default_amount: z.number().int().optional().describe('default value: 1'),
   custom_fields: z.array(z.unknown()).optional().describe('custom fields values'),
 });
@@ -234,16 +234,16 @@ export async function getService(client: SmallinvoiceClient, args: z.infer<typeo
 
 export const updateServiceInput = z.object({
   service_id: z.number().int().describe('service ID'),
-  number: z.string().optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  category_id: z.number().int().optional(),
-  including_vat: z.boolean().optional(),
-  vat: z.number().optional(),
-  unit_id: z.number().int().optional(),
-  price: z.number().optional(),
-  default_amount: z.number().int().optional(),
+  number: z.string().optional().describe('Number'),
+  name: z.string().optional().describe('Name'),
+  description: z.string().optional().describe('Description'),
+  notes: z.string().optional().describe('Notes'),
+  category_id: z.number().int().optional().describe('Category id'),
+  including_vat: z.boolean().optional().describe('Including vat'),
+  vat: z.number().optional().describe('Vat'),
+  unit_id: z.number().int().optional().describe('Unit id'),
+  price: z.number().optional().describe('Price'),
+  default_amount: z.number().int().optional().describe('Default amount'),
   custom_fields: z.array(z.unknown()).optional().describe('custom fields values'),
 });
 export async function updateService(client: SmallinvoiceClient, args: z.infer<typeof updateServiceInput>): Promise<unknown> {
@@ -265,7 +265,7 @@ export const listBankAccountsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listBankAccounts(client: SmallinvoiceClient, args: z.infer<typeof listBankAccountsInput>): Promise<unknown> {
   return client.get('/configuration/bank-accounts', args as Record<string, string | number | boolean | undefined | null>);
@@ -319,7 +319,7 @@ export const listExchangeRatesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listExchangeRates(client: SmallinvoiceClient, args: z.infer<typeof listExchangeRatesInput>): Promise<unknown> {
   return client.get('/configuration/exchange-rates', args as Record<string, string | number | boolean | undefined | null>);
@@ -368,7 +368,7 @@ export const listContactAccountsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listContactAccounts(client: SmallinvoiceClient, args: z.infer<typeof listContactAccountsInput>): Promise<unknown> {
   const { contact_id, ...query } = args;
@@ -426,7 +426,7 @@ export const listContactAddressesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listContactAddresses(client: SmallinvoiceClient, args: z.infer<typeof listContactAddressesInput>): Promise<unknown> {
   const { contact_id, ...query } = args;
@@ -491,7 +491,7 @@ export const listContactGroupsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listContactGroups(client: SmallinvoiceClient, args: z.infer<typeof listContactGroupsInput>): Promise<unknown> {
   return client.get('/contacts/configuration/groups', args as Record<string, string | number | boolean | undefined | null>);
@@ -534,7 +534,7 @@ export const listContactsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listContacts(client: SmallinvoiceClient, args: z.infer<typeof listContactsInput>): Promise<unknown> {
   return client.get('/contacts', args as Record<string, string | number | boolean | undefined | null>);
@@ -642,7 +642,7 @@ export const listLettersInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listLetters(client: SmallinvoiceClient, args: z.infer<typeof listLettersInput>): Promise<unknown> {
   return client.get('/contacts/letters', args as Record<string, string | number | boolean | undefined | null>);
@@ -760,7 +760,7 @@ export const listContactPeopleInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listContactPeople(client: SmallinvoiceClient, args: z.infer<typeof listContactPeopleInput>): Promise<unknown> {
   const { contact_id, ...query } = args;
@@ -831,7 +831,7 @@ export const listRemindersInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listReminders(client: SmallinvoiceClient, args: z.infer<typeof listRemindersInput>): Promise<unknown> {
   return client.get('/contacts/reminders', args as Record<string, string | number | boolean | undefined | null>);
@@ -886,7 +886,7 @@ export const listIsrsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listIsrs(client: SmallinvoiceClient, args: z.infer<typeof listIsrsInput>): Promise<unknown> {
   return client.get('/receivables/configuration/isrs', args as Record<string, string | number | boolean | undefined | null>);
@@ -906,7 +906,7 @@ export const listDeliveryNotesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listDeliveryNotes(client: SmallinvoiceClient, args: z.infer<typeof listDeliveryNotesInput>): Promise<unknown> {
   return client.get('/receivables/delivery-notes', args as Record<string, string | number | boolean | undefined | null>);
@@ -1035,7 +1035,7 @@ export const listInvoicesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listInvoices(client: SmallinvoiceClient, args: z.infer<typeof listInvoicesInput>): Promise<unknown> {
   return client.get('/receivables/invoices', args as Record<string, string | number | boolean | undefined | null>);
@@ -1192,7 +1192,7 @@ export const listOffersInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listOffers(client: SmallinvoiceClient, args: z.infer<typeof listOffersInput>): Promise<unknown> {
   return client.get('/receivables/offers', args as Record<string, string | number | boolean | undefined | null>);
@@ -1325,7 +1325,7 @@ export const listOrderConfirmationsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listOrderConfirmations(client: SmallinvoiceClient, args: z.infer<typeof listOrderConfirmationsInput>): Promise<unknown> {
   return client.get('/receivables/order-confirmations', args as Record<string, string | number | boolean | undefined | null>);
@@ -1455,7 +1455,7 @@ export const listInvoicePaymentsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listInvoicePayments(client: SmallinvoiceClient, args: z.infer<typeof listInvoicePaymentsInput>): Promise<unknown> {
   const { invoice_id, ...query } = args;
@@ -1510,7 +1510,7 @@ export const listActivitiesInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listActivities(client: SmallinvoiceClient, args: z.infer<typeof listActivitiesInput>): Promise<unknown> {
   return client.get('/reporting/activities', args as Record<string, string | number | boolean | undefined | null>);
@@ -1529,7 +1529,7 @@ export const listCostUnitsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listCostUnits(client: SmallinvoiceClient, args: z.infer<typeof listCostUnitsInput>): Promise<unknown> {
   return client.get('/reporting/cost-units', args as Record<string, string | number | boolean | undefined | null>);
@@ -1577,7 +1577,7 @@ export const listEffortsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listEfforts(client: SmallinvoiceClient, args: z.infer<typeof listEffortsInput>): Promise<unknown> {
   return client.get('/reporting/efforts', args as Record<string, string | number | boolean | undefined | null>);
@@ -1632,7 +1632,7 @@ export const listProjectsInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listProjects(client: SmallinvoiceClient, args: z.infer<typeof listProjectsInput>): Promise<unknown> {
   return client.get('/reporting/projects', args as Record<string, string | number | boolean | undefined | null>);
@@ -1696,7 +1696,7 @@ export const listWorkingHoursInput = z.object({
   q: z.string().optional().describe('Value for full text search'),
   filter: z.string().optional().describe('Filter expression (JSON)'),
   limit: z.number().int().optional().describe('Limits the number of items returned. Number in a range [1-200]'),
-  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0. '),
+  offset: z.number().int().optional().describe('Offset of the first item to return. The offset of the initial item is 0.'),
 });
 export async function listWorkingHours(client: SmallinvoiceClient, args: z.infer<typeof listWorkingHoursInput>): Promise<unknown> {
   return client.get('/reporting/working-hours', args as Record<string, string | number | boolean | undefined | null>);

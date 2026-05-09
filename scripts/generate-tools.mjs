@@ -44,6 +44,11 @@ function toSnake(camel) {
   return camel.replace(/([A-Z])/g, (_, c) => `_${c.toLowerCase()}`);
 }
 
+// "vat_rate" → "Vat rate", "name" → "Name"
+function humanize(snakeName) {
+  return snakeName.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+}
+
 // Extract path template params: '/invoices/{invoiceId}/payments/{paymentId}' → ['invoiceId', 'paymentId']
 function extractPathParams(path) {
   const matches = path.match(/\{([^}]+)\}/g) ?? [];
@@ -56,11 +61,12 @@ function resolveParam(param) {
   return param;
 }
 
-// Get Swagger type → Zod type string
-function swaggerTypeToZod(prop, required = false) {
+// Get Swagger type → Zod type string. fieldName used for humanize fallback.
+function swaggerTypeToZod(prop, required = false, fieldName = '') {
   const type = prop.type;
-  const desc = (prop.description ?? '').replace(/'/g, "\\'").replace(/\n/g, ' ');
-  const descStr = desc ? `.describe('${desc}')` : '';
+  const rawDesc = (prop.description ?? '').trim();
+  const desc = (rawDesc || humanize(fieldName)).replace(/'/g, "\\'").replace(/\n/g, ' ');
+  const descStr = `.describe('${desc}')`;
   const optStr = required ? '' : '.optional()';
 
   if (type === 'integer') return `z.number().int()${optStr}${descStr}`;
@@ -80,7 +86,7 @@ function buildBodySchema(defName) {
   const entries = [];
   for (const [propName, prop] of Object.entries(def.properties)) {
     const snakeProp = /^[a-z_]+$/.test(propName) ? propName : propName;
-    const zodType = swaggerTypeToZod(prop, required.has(propName));
+    const zodType = swaggerTypeToZod(prop, required.has(propName), propName);
     entries.push(`  ${snakeProp}: ${zodType}`);
   }
   return entries;
@@ -125,7 +131,8 @@ function buildSchemaFields(swaggerPath, method, op) {
       }
     } else if (param.in === 'query') {
       const snakeName = toSnake(param.name);
-      const desc = (param.description ?? param.name).replace(/'/g, "\\'");
+      const rawDesc = (param.description ?? '').trim();
+      const desc = (rawDesc || humanize(snakeName)).replace(/'/g, "\\'");
       const zodBase = param.type === 'integer' ? 'z.number().int()' : 'z.string()';
       fields.push(`  ${snakeName}: ${zodBase}.optional().describe('${desc}')`);
     } else if (param.in === 'body') {

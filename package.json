@@ -20,12 +20,13 @@
     "prepublishOnly": "npm run build && npm test"
   },
   "engines": { "node": ">=18.0.0" },
-  "keywords": ["mcp", "mcp-server", "smallinvoice", "invoicing", "accounting", "swiss"],
+  "private": true,
+  "keywords": ["mcp", "mcp-server", "smallinvoice", "aiwerk", "swiss", "invoicing", "accounting"],
   "author": "AIWerk <kontakt@aiwerk.ch>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AIWerk/mcp-server-smallinvoice.git"
+    "url": ""
   },
   "homepage": "https://aiwerkmcp.com",
   "bugs": { "url": "https://github.com/AIWerk/mcp-server-smallinvoice/issues" },
