@@ -15,8 +15,9 @@
     "start": "node dist/src/server.js",
     "predev": "npm run gen-version",
     "dev": "tsc --watch",
-    "pretest": "npm run gen-version",
+    "pretest": "npm run gen-version && bash -c 'pkill -9 -f \"[n]ode.*vitest\" 2>/dev/null; pkill -9 -f \"[e]sbuild.*--service\" 2>/dev/null; true'",
     "test": "vitest run",
+    "posttest": "bash -c 'pkill -9 -f \"[n]ode.*vitest\" 2>/dev/null; pkill -9 -f \"[e]sbuild.*--service\" 2>/dev/null; true'",
     "prepublishOnly": "bash scripts/prepublish-safety.sh && npm run build && npm test"
   },
   "engines": { "node": ">=18.0.0" },
