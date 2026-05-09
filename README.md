@@ -20,6 +20,7 @@ npx -y @aiwerk/mcp-server-smallinvoice
 | `SMALLINVOICE_DRY_RUN` | optional | Set to `1` to prevent write operations from reaching the API |
 | `SMALLINVOICE_NO_SNAPSHOT` | optional | Set to `1` to disable pre-write entity snapshots |
 | `SMALLINVOICE_SNAPSHOT_DIR` | optional | Directory for pre-write snapshots (default: `~/.aiwerk/smallinvoice-snapshots`) |
+| `SMALLINVOICE_SNAPSHOT_FAIL_OPEN` | optional | Set to `1` to log a warning instead of blocking when a snapshot fails |
 | `SMALLINVOICE_API_TIMEOUT_MS` | optional | Request timeout in ms (default: `30000`) |
 
 ### MCP client config example (Claude Desktop / OpenClaw)
@@ -46,11 +47,12 @@ npx -y @aiwerk/mcp-server-smallinvoice
 
 1. In your smallinvoice account: **Home → Users → API V2 → New client**
    - Grant type: **Authorization Code**
+   - Redirect URI: `http://127.0.0.1:8765/callback` (must be registered in the client config)
    - Copy `client_id` and `client_secret`
 
 2. Run the authorization URL in your browser:
    ```
-   https://api.smallinvoice.com/v2/auth/authorize?response_type=code&client_id=YOUR_CLIENT_ID
+   https://api.smallinvoice.com/v2/auth/authorize?response_type=code&client_id=YOUR_CLIENT_ID&scope=profile+contact+contact_reminder+letter+configuration+catalog+invoice+offer+delivery_note+order_confirmation+project+cost_unit+working_hours+activity+effort
    ```
    Log in and approve. You receive a `code`.
 
@@ -58,11 +60,13 @@ npx -y @aiwerk/mcp-server-smallinvoice
    ```bash
    curl -X POST https://api.smallinvoice.com/v2/auth/access-tokens \
      -H 'Content-Type: application/json' \
-     -d '{"grant_type":"authorization_code","client_id":"...","client_secret":"...","code":"..."}'
+     -d '{"grant_type":"authorization_code","client_id":"...","client_secret":"...","code":"...","redirect_uri":"http://127.0.0.1:8765/callback"}'
    ```
    The response contains `access_token` and `refresh_token`.
 
 4. Set `SMALLINVOICE_REFRESH_TOKEN` to the returned `refresh_token`. The server persists new tokens automatically after each refresh.
+
+> **Token file is source of truth after first refresh.** Once the server performs its first token rotation, the persisted `SMALLINVOICE_TOKEN_FILE` takes priority over `SMALLINVOICE_REFRESH_TOKEN` env var. If you rotate the refresh token manually, update or delete the token file.
 
 ## Tools
 
@@ -81,7 +85,9 @@ All `delete_*` tools are marked `destructiveHint: true`. All `list_*` / `get_*` 
 
 ## Important notes
 
-**Refresh token rotation.** Smallinvoice revokes the old refresh token the moment it issues a new one. The server uses an atomic write (tmp file → fsync → rename) to persist the new token before using it. If the process crashes after the API rotation but before persist completes, the OAuth chain is broken — re-run the bootstrap flow from step 2 above.
+**Refresh token rotation.** Smallinvoice revokes the old refresh token the moment it issues a new one. The server uses atomic write (content fsync + atomic rename + dir fsync best-effort) to persist the new token before using it. If the process crashes after the API rotation but before persist completes, the OAuth chain is broken — re-run the bootstrap flow from step 2 above.
+
+**Cross-process refresh safety.** Multiple MCP server instances sharing the same token file are protected by an O_EXCL file lock. A double-check after acquiring the lock avoids redundant refreshes when another process already rotated the token.
 
 **`SMALLINVOICE_DRY_RUN=1`.** All write tools (`create_*`, `update_*`, `delete_*`, `change_*`, `send_*`, `record_*`) return a stub response without contacting smallinvoice:
 ```json
@@ -89,7 +95,14 @@ All `delete_*` tools are marked `destructiveHint: true`. All `list_*` / `get_*` 
 ```
 Use this when testing against a production account.
 
-**Pre-write snapshots.** Before each `PUT` or `PATCH`, the current entity is fetched and saved to `~/.aiwerk/smallinvoice-snapshots/{timestamp}_{tool}_{id}.json`. The tool result includes a `_snapshot` field with the file path. Disable with `SMALLINVOICE_NO_SNAPSHOT=1`.
+**Pre-write snapshots.** Before each mutating operation, the current entity state is fetched and saved to `~/.aiwerk/smallinvoice-snapshots/`. The tool result includes a `_snapshot` field with the file path.
+
+- **PUT / PATCH** — snapshots the entity being updated
+- **DELETE** — snapshots each entity being deleted (batch-aware: all IDs fetched in parallel, saved as one JSON file with partial-failure tolerance)
+- **send_by_email / send_by_post** — snapshots the parent document before sending ⚠️ IRREVERSIBLE: sends real email/post — pre-state snapshotted under `~/.aiwerk/smallinvoice-snapshots/`
+- **Sub-resource POST** (e.g. `record_invoice_payment`, `create_contact_account`) — snapshots the parent entity before modifying it
+
+Disable snapshots with `SMALLINVOICE_NO_SNAPSHOT=1`. By default, a snapshot failure **blocks the write** (fail-closed). Set `SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1` to downgrade to a warning and continue.
 
 **Rate limit.** The actual limit is **360 requests/minute** (not 1000 as stated in the public documentation). The server logs a warning to stderr when `X-Rate-Limit-Remaining` drops below 30.
 

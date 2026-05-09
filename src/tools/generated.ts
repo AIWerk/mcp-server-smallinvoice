@@ -385,7 +385,7 @@ export const createContactAccountInput = z.object({
 });
 export async function createContactAccount(client: SmallinvoiceClient, args: z.infer<typeof createContactAccountInput>): Promise<unknown> {
   const { contact_id, ...body } = args;
-  return client.post(`/contacts/${args.contact_id}/accounts`, body);
+  return client.post(`/contacts/${args.contact_id}/accounts`, body, { toolName: 'createContactAccount', id: args.contact_id, entityPath: `/contacts/${args.contact_id}` });
 }
 
 export const getContactAccountInput = z.object({
@@ -447,7 +447,7 @@ export const createContactAddressInput = z.object({
 });
 export async function createContactAddress(client: SmallinvoiceClient, args: z.infer<typeof createContactAddressInput>): Promise<unknown> {
   const { contact_id, ...body } = args;
-  return client.post(`/contacts/${args.contact_id}/addresses`, body);
+  return client.post(`/contacts/${args.contact_id}/addresses`, body, { toolName: 'createContactAddress', id: args.contact_id, entityPath: `/contacts/${args.contact_id}` });
 }
 
 export const getContactAddressInput = z.object({
@@ -626,7 +626,7 @@ export const assignContactGroupsInput = z.object({
   groups_ids: z.string().describe('groups IDs (comma separated)'),
 });
 export async function assignContactGroups(client: SmallinvoiceClient, args: z.infer<typeof assignContactGroupsInput>): Promise<unknown> {
-  return client.patch(`/contacts/${args.contact_id}/assign-groups/${args.groups_ids}`);
+  return client.patch(`/contacts/${args.contact_id}/assign-groups/${args.groups_ids}`, undefined, { toolName: 'assignContactGroups', id: args.contact_id, entityPath: `/contacts/${args.contact_id}` });
 }
 
 export const removeContactGroupsInput = z.object({
@@ -634,7 +634,7 @@ export const removeContactGroupsInput = z.object({
   groups_ids: z.string().describe('groups IDs (comma separated)'),
 });
 export async function removeContactGroups(client: SmallinvoiceClient, args: z.infer<typeof removeContactGroupsInput>): Promise<unknown> {
-  return client.patch(`/contacts/${args.contact_id}/remove-groups/${args.groups_ids}`);
+  return client.patch(`/contacts/${args.contact_id}/remove-groups/${args.groups_ids}`, undefined, { toolName: 'removeContactGroups', id: args.contact_id, entityPath: `/contacts/${args.contact_id}` });
 }
 
 export const listLettersInput = z.object({
@@ -784,7 +784,7 @@ export const createContactPersonInput = z.object({
 });
 export async function createContactPerson(client: SmallinvoiceClient, args: z.infer<typeof createContactPersonInput>): Promise<unknown> {
   const { contact_id, ...body } = args;
-  return client.post(`/contacts/${args.contact_id}/people`, body);
+  return client.post(`/contacts/${args.contact_id}/people`, body, { toolName: 'createContactPerson', id: args.contact_id, entityPath: `/contacts/${args.contact_id}` });
 }
 
 export const getContactPersonInput = z.object({
@@ -1472,7 +1472,7 @@ export const recordInvoicePaymentInput = z.object({
 });
 export async function recordInvoicePayment(client: SmallinvoiceClient, args: z.infer<typeof recordInvoicePaymentInput>): Promise<unknown> {
   const { invoice_id, ...body } = args;
-  return client.post(`/receivables/invoices/${args.invoice_id}/payments`, body);
+  return client.post(`/receivables/invoices/${args.invoice_id}/payments`, body, { toolName: 'recordInvoicePayment', id: args.invoice_id, entityPath: `/receivables/invoices/${args.invoice_id}` });
 }
 
 export const getInvoicePaymentInput = z.object({

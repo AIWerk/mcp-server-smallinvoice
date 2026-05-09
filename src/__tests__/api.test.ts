@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { writeFileSync, existsSync, unlinkSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { SmallinvoiceClient } from '../api.js';
@@ -58,13 +58,19 @@ describe('SmallinvoiceClient.get', () => {
   });
 
   it('throws SmallinvoiceAuthError on 401', async () => {
-    // First call returns 401, then a refresh succeeds returning a new token,
-    // then the retry also returns 401 → SmallinvoiceAuthError
+    // Env-only setup: no token file, SMALLINVOICE_ACCESS_TOKEN as initial credential.
+    // This means forceRefresh=true will actually hit the refresh endpoint (no valid file token
+    // for the double-check inside withRefreshLock to short-circuit on).
+    try { unlinkSync(TEST_TOKEN_FILE); } catch { /* */ }
+    process.env.SMALLINVOICE_ACCESS_TOKEN = 'initial-access-token';
+    process.env.SMALLINVOICE_REFRESH_TOKEN = 'old-refresh-token';
+
     vi.spyOn(globalThis, 'fetch')
+      // API call → 401
       .mockResolvedValueOnce(new Response(null, { status: 401, statusText: 'Unauthorized' }))
       // Refresh endpoint returns new tokens
       .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'new', refresh_token: 'new-ref', expires_in: 3600 }), { status: 200 }))
-      // Second API call also 401
+      // Retry API call also 401 → SmallinvoiceAuthError
       .mockResolvedValueOnce(new Response(null, { status: 401, statusText: 'Unauthorized' }));
 
     const client = new SmallinvoiceClient();
@@ -177,6 +183,59 @@ describe('SmallinvoiceClient config errors', () => {
     const { SmallinvoiceConfigError } = await import('../errors.js');
     const client = new SmallinvoiceClient();
     await expect(client.get('/auth/owner')).rejects.toThrow(SmallinvoiceConfigError);
+  });
+});
+
+describe('snapshot fail-closed', () => {
+  beforeEach(() => {
+    process.env.SMALLINVOICE_DRY_RUN = '0';
+    process.env.SMALLINVOICE_NO_SNAPSHOT = '0';
+    process.env.SMALLINVOICE_SNAPSHOT_DIR = join(tmpdir(), `si-fail-closed-${process.pid}`);
+    delete process.env.SMALLINVOICE_SNAPSHOT_FAIL_OPEN;
+  });
+
+  afterEach(() => {
+    delete process.env.SMALLINVOICE_SNAPSHOT_DIR;
+    delete process.env.SMALLINVOICE_SNAPSHOT_FAIL_OPEN;
+  });
+
+  it('put throws SmallinvoiceConfigError when snapshot GET fails (fail-closed default)', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'not found' }), { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } }));
+    const { SmallinvoiceConfigError } = await import('../errors.js');
+    const client = new SmallinvoiceClient();
+    await expect(
+      client.put('/receivables/invoices/99', { note: 'test' }, { toolName: 'updateInvoice', id: 99 }),
+    ).rejects.toThrow(SmallinvoiceConfigError);
+  });
+
+  it('put continues with warning when SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1', async () => {
+    process.env.SMALLINVOICE_SNAPSHOT_FAIL_OPEN = '1';
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch')
+      // GET fails → snapshot fail-open
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'not found' }), { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } }))
+      // PUT succeeds
+      .mockResolvedValueOnce(new Response(JSON.stringify({ item: { id: 99 } }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const client = new SmallinvoiceClient();
+    const result = await client.put('/receivables/invoices/99', { note: 'test' }, { toolName: 'updateInvoice', id: 99 }) as { _snapshot: string };
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('SNAPSHOT_FAIL_OPEN'));
+    expect(result._snapshot).toContain('fail-open');
+  });
+
+  it('delete throws SmallinvoiceConfigError when all batch GETs fail (fail-closed default)', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'nf' }), { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'nf' }), { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } }));
+    const { SmallinvoiceConfigError } = await import('../errors.js');
+    const client = new SmallinvoiceClient();
+    await expect(
+      client.delete('/receivables/invoices/10,11', {
+        toolName: 'deleteInvoices',
+        ids: ['10', '11'],
+        entityPathFn: (id) => `/receivables/invoices/${id}`,
+      }),
+    ).rejects.toThrow(SmallinvoiceConfigError);
   });
 });
 

@@ -27,6 +27,11 @@ import {
   changeProjectStatus,
   changeProjectStatusInput,
   deleteInvoices,
+  assignContactGroups,
+  removeContactGroups,
+  createContactAccount,
+  createContactAddress,
+  createContactPerson,
 } from '../tools/generated.js';
 
 const TEST_TOKEN_FILE = join(tmpdir(), `si-tools-test-tokens-${process.pid}.json`);
@@ -175,12 +180,13 @@ describe('sendInvoiceByEmail', () => {
 });
 
 describe('recordInvoicePayment', () => {
-  it('calls client.post on payments sub-resource', async () => {
+  it('calls client.post on payments sub-resource with parent invoice snapshotInfo', async () => {
     const client = mockClient();
     await recordInvoicePayment(client, { invoice_id: 7, amount: 180 });
     expect((client.post as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
       '/receivables/invoices/7/payments',
       expect.objectContaining({ amount: 180 }),
+      expect.objectContaining({ toolName: 'recordInvoicePayment', id: 7, entityPath: '/receivables/invoices/7' }),
     );
   });
 });
@@ -211,5 +217,69 @@ describe('deleteInvoices', () => {
     );
     const snapshotInfo = spy.mock.calls[0][1] as { entityPathFn: (id: string) => string };
     expect(snapshotInfo.entityPathFn('42')).toBe('/receivables/invoices/42');
+  });
+});
+
+describe('assignContactGroups / removeContactGroups snapshot', () => {
+  it('assignContactGroups calls client.patch with parent entity snapshotInfo', async () => {
+    const client = mockClient();
+    await assignContactGroups(client, { contact_id: 7, groups_ids: '1,2' });
+    expect((client.patch as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/contacts/7/assign-groups/1,2',
+      undefined,
+      expect.objectContaining({ toolName: 'assignContactGroups', id: 7 }),
+    );
+  });
+
+  it('removeContactGroups calls client.patch with parent entity snapshotInfo', async () => {
+    const client = mockClient();
+    await removeContactGroups(client, { contact_id: 7, groups_ids: '3' });
+    expect((client.patch as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/contacts/7/remove-groups/3',
+      undefined,
+      expect.objectContaining({ toolName: 'removeContactGroups', id: 7 }),
+    );
+  });
+});
+
+describe('POST sub-resource snapshot', () => {
+  it('createContactAccount passes snapshotInfo referencing parent contact', async () => {
+    const client = mockClient();
+    await createContactAccount(client, { contact_id: 5, iban: 'CH...', bank_name: 'UBS' });
+    expect((client.post as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/contacts/5/accounts',
+      expect.any(Object),
+      expect.objectContaining({ toolName: 'createContactAccount', id: 5, entityPath: '/contacts/5' }),
+    );
+  });
+
+  it('createContactAddress passes snapshotInfo referencing parent contact', async () => {
+    const client = mockClient();
+    await createContactAddress(client, { contact_id: 8, address: 'Musterstrasse 1' });
+    expect((client.post as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/contacts/8/addresses',
+      expect.any(Object),
+      expect.objectContaining({ toolName: 'createContactAddress', id: 8, entityPath: '/contacts/8' }),
+    );
+  });
+
+  it('createContactPerson passes snapshotInfo referencing parent contact', async () => {
+    const client = mockClient();
+    await createContactPerson(client, { contact_id: 3, name: 'Max Muster' });
+    expect((client.post as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/contacts/3/people',
+      expect.any(Object),
+      expect.objectContaining({ toolName: 'createContactPerson', id: 3, entityPath: '/contacts/3' }),
+    );
+  });
+
+  it('recordInvoicePayment passes snapshotInfo referencing parent invoice', async () => {
+    const client = mockClient();
+    await recordInvoicePayment(client, { invoice_id: 7, amount: 180 });
+    expect((client.post as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
+      '/receivables/invoices/7/payments',
+      expect.any(Object),
+      expect.objectContaining({ toolName: 'recordInvoicePayment', id: 7, entityPath: '/receivables/invoices/7' }),
+    );
   });
 });

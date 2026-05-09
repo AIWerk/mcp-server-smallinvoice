@@ -18,6 +18,7 @@ beforeEach(() => {
 
 afterEach(() => {
   try { if (existsSync(TEST_TOKEN_FILE)) unlinkSync(TEST_TOKEN_FILE); } catch { /* */ }
+  try { const lock = TEST_TOKEN_FILE + '.lock'; if (existsSync(lock)) unlinkSync(lock); } catch { /* */ }
   vi.restoreAllMocks();
 });
 
@@ -131,5 +132,52 @@ describe('getAccessToken', () => {
 
     const { getAccessToken } = await import('../oauth.js');
     await expect(getAccessToken('client-id', 'client-secret')).rejects.toThrow('Token refresh failed');
+  });
+
+  it('forceRefresh=true with expired token file triggers a real network refresh', async () => {
+    // Expired token — withRefreshLock double-check fails, so a real network refresh fires
+    const tokens = { access_token: 'old-acc', refresh_token: 'old-ref', expires_at: Date.now() - 1000 };
+    writeFileSync(TEST_TOKEN_FILE, JSON.stringify(tokens));
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ access_token: 'fresh-acc', refresh_token: 'new-ref', expires_in: 3600 }), { status: 200 }),
+    );
+
+    const { getAccessToken } = await import('../oauth.js');
+    const result = await getAccessToken('client-id', 'client-secret', true);
+    expect(result).toBe('fresh-acc');
+  });
+
+  it('concurrent getAccessToken calls only trigger one refresh fetch', async () => {
+    const tokens = { access_token: 'old', refresh_token: 'old-ref', expires_at: Date.now() - 1000 };
+    writeFileSync(TEST_TOKEN_FILE, JSON.stringify(tokens));
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ access_token: 'new', refresh_token: 'new-ref', expires_in: 3600 }), { status: 200 }),
+    );
+
+    const { getAccessToken } = await import('../oauth.js');
+    const [r1, r2] = await Promise.all([
+      getAccessToken('client-id', 'client-secret'),
+      getAccessToken('client-id', 'client-secret'),
+    ]);
+    expect(r1).toBe('new');
+    expect(r2).toBe('new');
+    // Only one refresh despite two concurrent callers (refreshInFlight deduplication)
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('persistTokenFile fsync', () => {
+  it('data is immediately readable after persist (fsyncSync ensures durability before rename)', async () => {
+    // ESM named exports cannot be spied on in vitest; test the observable contract instead:
+    // fsyncSync flushes content to disk before renameSync, so a read immediately after
+    // persistTokenFile must return the exact data that was written.
+    const { persistTokenFile, readTokenFile } = await import('../oauth.js');
+    const tokens = { access_token: 'synced-acc', refresh_token: 'synced-ref', expires_at: Date.now() + 3600_000 };
+    persistTokenFile(tokens);
+    const read = readTokenFile();
+    expect(read?.access_token).toBe('synced-acc');
+    expect(read?.refresh_token).toBe('synced-ref');
   });
 });

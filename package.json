@@ -17,10 +17,9 @@
     "dev": "tsc --watch",
     "pretest": "npm run gen-version",
     "test": "vitest run",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "bash scripts/prepublish-safety.sh && npm run build && npm test"
   },
   "engines": { "node": ">=18.0.0" },
-  "private": true,
   "keywords": ["mcp", "mcp-server", "smallinvoice", "aiwerk", "swiss", "invoicing", "accounting"],
   "author": "AIWerk <kontakt@aiwerk.ch>",
   "license": "MIT",

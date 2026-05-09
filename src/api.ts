@@ -3,9 +3,12 @@
 // DRY_RUN: set SMALLINVOICE_DRY_RUN=1 to prevent all write calls from reaching
 // the API. Returns a stub response describing what would have been sent.
 //
-// Pre-write snapshot: before PUT / PATCH on a single-entity path, GETs the
+// Pre-write snapshot: before PUT / PATCH / DELETE / mutating POST, GETs the
 // current entity and saves to ~/.aiwerk/smallinvoice-snapshots/ before mutating.
 // Tool results include _snapshot path so the agent can verify before/after state.
+//
+// Snapshot fail-closed: by default a snapshot error blocks the write (set
+// SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1 to downgrade to a warning and continue).
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -51,6 +54,10 @@ function isDryRun(): boolean {
 
 function isSnapshotEnabled(): boolean {
   return process.env.SMALLINVOICE_NO_SNAPSHOT !== '1';
+}
+
+function snapshotFailOpen(): boolean {
+  return process.env.SMALLINVOICE_SNAPSHOT_FAIL_OPEN === '1';
 }
 
 function snapshotDir(): string {
@@ -105,20 +112,9 @@ async function fetchWithAuth(
   let accessToken = await getAccessToken(clientId, clientSecret);
   let response = await doFetch(method, path, body, query, accessToken, timeoutMs);
 
-  // 401 retry once with fresh token
+  // 401 retry once — force a fresh token refresh (handles env-only setup where file token is absent)
   if (response.status === 401) {
-    // Force a refresh by invalidating the cached token
-    // (getAccessToken will refresh because the current file token is expired/missing)
-    // We do a direct refresh by deleting the expires_at from the file... instead,
-    // let's just re-call getAccessToken which will see the 401 and refresh.
-    // Actually, getAccessToken checks expires_at — on 401 we need to force refresh.
-    // Simple approach: temporarily override to trigger refresh.
-    const { persistTokenFile, readTokenFile } = await import('./oauth.js');
-    const existing = readTokenFile();
-    if (existing) {
-      persistTokenFile({ ...existing, expires_at: 0 }); // force expiry
-    }
-    accessToken = await getAccessToken(clientId, clientSecret);
+    accessToken = await getAccessToken(clientId, clientSecret, true);
     response = await doFetch(method, path, body, query, accessToken, timeoutMs);
   }
 
@@ -209,8 +205,10 @@ async function doFetch(
 }
 
 // Save a pre-write snapshot of the current entity state.
-async function saveSnapshot(entityPath: string, toolName: string, id: string | number): Promise<string | null> {
-  if (!isSnapshotEnabled()) return null;
+// Returns the snapshot file path (or a placeholder when disabled/fail-open).
+// Throws SmallinvoiceConfigError on failure unless SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1.
+async function saveSnapshot(entityPath: string, toolName: string, id: string | number): Promise<string> {
+  if (!isSnapshotEnabled()) return '<snapshot disabled>';
   try {
     const { data } = await fetchWithAuth('GET', entityPath);
     const dir = snapshotDir();
@@ -221,8 +219,14 @@ async function saveSnapshot(entityPath: string, toolName: string, id: string | n
     writeFileSync(filePath, JSON.stringify(data, null, 2), { mode: 0o600 });
     return filePath;
   } catch (err) {
-    console.error(`[mcp-server-smallinvoice] snapshot failed for ${entityPath}: ${err instanceof Error ? err.message : err}`);
-    return null;
+    const msg = `snapshot failed for ${entityPath}: ${err instanceof Error ? err.message : err}`;
+    if (snapshotFailOpen()) {
+      console.error(`[mcp-server-smallinvoice] WARNING: ${msg} (continuing because SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1)`);
+      return '<snapshot failed; opt-in fail-open>';
+    }
+    throw new SmallinvoiceConfigError(
+      `Pre-write snapshot failed (set SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1 to override): ${msg}`,
+    );
   }
 }
 
@@ -233,20 +237,36 @@ export interface BatchSnapshotInfo {
 }
 
 // Save pre-delete snapshots for each entity in a batch operation.
-// Partial failures are recorded in the snapshot (not thrown) so the delete still proceeds.
-async function saveBatchSnapshot(info: BatchSnapshotInfo): Promise<string | null> {
-  if (!isSnapshotEnabled()) return null;
-  try {
-    const entries = await Promise.all(
-      info.ids.map(async (id) => {
-        try {
-          const { data } = await fetchWithAuth('GET', info.entityPathFn(id));
-          return { id, data };
-        } catch (e) {
-          return { id, error: e instanceof Error ? e.message : String(e) };
-        }
-      }),
+// Partial GET failures are recorded as error entries — the snapshot is still written.
+// If ALL GETs fail (no pre-state captured at all), throws unless SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1.
+async function saveBatchSnapshot(info: BatchSnapshotInfo): Promise<string> {
+  if (!isSnapshotEnabled()) return '<snapshot disabled>';
+
+  const entries = await Promise.all(
+    info.ids.map(async (id) => {
+      try {
+        const { data } = await fetchWithAuth('GET', info.entityPathFn(id));
+        return { id, data };
+      } catch (e) {
+        return { id, error: e instanceof Error ? e.message : String(e) };
+      }
+    }),
+  );
+
+  // All GETs failed — no pre-state captured
+  const allFailed = entries.length > 0 && entries.every(e => 'error' in e);
+  if (allFailed) {
+    const msg = `batch snapshot: all ${entries.length} GET(s) failed for ${info.toolName}`;
+    if (snapshotFailOpen()) {
+      console.error(`[mcp-server-smallinvoice] WARNING: ${msg} (continuing because SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1)`);
+      return '<snapshot failed; opt-in fail-open>';
+    }
+    throw new SmallinvoiceConfigError(
+      `Pre-write snapshot failed (set SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1 to override): ${msg}`,
     );
+  }
+
+  try {
     const dir = snapshotDir();
     mkdirSync(dir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
@@ -255,8 +275,14 @@ async function saveBatchSnapshot(info: BatchSnapshotInfo): Promise<string | null
     writeFileSync(filePath, JSON.stringify({ tool: info.toolName, ids: info.ids, entries }, null, 2), { mode: 0o600 });
     return filePath;
   } catch (err) {
-    console.error(`[mcp-server-smallinvoice] batch snapshot failed for ${info.toolName}: ${err instanceof Error ? err.message : err}`);
-    return null;
+    const msg = `batch snapshot write failed for ${info.toolName}: ${err instanceof Error ? err.message : err}`;
+    if (snapshotFailOpen()) {
+      console.error(`[mcp-server-smallinvoice] WARNING: ${msg} (continuing because SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1)`);
+      return '<snapshot failed; opt-in fail-open>';
+    }
+    throw new SmallinvoiceConfigError(
+      `Pre-write snapshot failed (set SMALLINVOICE_SNAPSHOT_FAIL_OPEN=1 to override): ${msg}`,
+    );
   }
 }
 
@@ -272,11 +298,22 @@ export class SmallinvoiceClient {
     return data as T;
   }
 
-  async post<T = unknown>(path: string, body?: unknown): Promise<T> {
+  async post<T = unknown>(
+    path: string,
+    body?: unknown,
+    snapshotInfo?: { toolName: string; id: string | number; entityPath: string },
+  ): Promise<T> {
     if (isDryRun()) {
       return { _dry_run: true, _would_call: { method: 'POST', path, body } } as unknown as T;
     }
+    let snapshotPath: string | undefined;
+    if (snapshotInfo) {
+      snapshotPath = await saveSnapshot(snapshotInfo.entityPath, snapshotInfo.toolName, snapshotInfo.id);
+    }
     const { data } = await fetchWithAuth('POST', path, body);
+    if (snapshotPath) {
+      return { ...(data as object), _snapshot: snapshotPath } as unknown as T;
+    }
     return data as T;
   }
 
@@ -284,7 +321,7 @@ export class SmallinvoiceClient {
     if (isDryRun()) {
       return { _dry_run: true, _would_call: { method: 'PUT', path, body } } as unknown as T;
     }
-    let snapshotPath: string | null = null;
+    let snapshotPath: string | undefined;
     if (snapshotInfo) {
       snapshotPath = await saveSnapshot(path, snapshotInfo.toolName, snapshotInfo.id);
     }
@@ -299,7 +336,7 @@ export class SmallinvoiceClient {
     if (isDryRun()) {
       return { _dry_run: true, _would_call: { method: 'PATCH', path, body } } as unknown as T;
     }
-    let snapshotPath: string | null = null;
+    let snapshotPath: string | undefined;
     if (snapshotInfo) {
       snapshotPath = await saveSnapshot(snapshotInfo.entityPath, snapshotInfo.toolName, snapshotInfo.id);
     }
@@ -314,7 +351,7 @@ export class SmallinvoiceClient {
     if (isDryRun()) {
       return { _dry_run: true, _would_call: { method: 'DELETE', path } } as unknown as T;
     }
-    let snapshotPath: string | null = null;
+    let snapshotPath: string | undefined;
     if (snapshotInfo) {
       snapshotPath = await saveBatchSnapshot(snapshotInfo);
     }

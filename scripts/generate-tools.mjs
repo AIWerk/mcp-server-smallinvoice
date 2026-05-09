@@ -162,6 +162,15 @@ function buildPathExpr(swaggerPath, pathFieldMap) {
   });
 }
 
+// POST sub-resource tools that modify a parent entity's state → snapshot the parent before creating.
+// Generic POSTs that CREATE a new top-level entity have no pre-state to snapshot.
+const POST_PARENT_SNAPSHOT_TOOLS = new Set([
+  'create_contact_account',
+  'create_contact_address',
+  'create_contact_person',
+  'record_invoice_payment',
+]);
+
 // Build the client call for each operation.
 // pathFieldMap: {urlPlaceholder → snake_field_name} for consistent arg references.
 function buildClientCall(op, swaggerPath, method, pathParams, queryParams, hasBody, camelName, action, pathFieldMap) {
@@ -216,6 +225,23 @@ function buildClientCall(op, swaggerPath, method, pathParams, queryParams, hasBo
 
   if (method === 'POST') {
     if (!hasBody) return `  return client.post(${pathArg});`;
+
+    // Sub-resource POST tools that mutate a parent entity — snapshot the parent first
+    if (POST_PARENT_SNAPSHOT_TOOLS.has(op.tool_name)) {
+      const parentIdPh = pathParams.find(p => /Id$/i.test(p) && !/Ids$/i.test(p));
+      if (parentIdPh) {
+        const parentFieldName = fieldOf(parentIdPh);
+        const parentPlaceholder = `{${parentIdPh}}`;
+        const parentPathTemplate = swaggerPath.substring(0, swaggerPath.indexOf(parentPlaceholder) + parentPlaceholder.length);
+        const entityPathExpr = buildPathExpr(parentPathTemplate, pathFieldMap);
+        const snapshotArg = `, { toolName: '${camelName}', id: args.${parentFieldName}, entityPath: \`${entityPathExpr}\` }`;
+        if (pathParams.length === 0) {
+          return `  return client.post(${pathArg}, args${snapshotArg});`;
+        }
+        return `  const { ${pathFieldNames.join(', ')}, ...body } = args;\n  return client.post(${pathArg}, body${snapshotArg});`;
+      }
+    }
+
     if (pathParams.length === 0) {
       return `  return client.post(${pathArg}, args);`;
     }
@@ -234,7 +260,17 @@ function buildClientCall(op, swaggerPath, method, pathParams, queryParams, hasBo
 
   if (method === 'PATCH') {
     if (action === 'assign-groups' || action === 'remove-groups') {
-      return `  return client.patch(${pathArg});`;
+      // Snapshot the parent entity (e.g. /contacts/{contactId}) before modifying its groups
+      const parentIdPh = pathParams.find(p => /Id$/i.test(p) && !/Ids$/i.test(p));
+      const parentFieldName = parentIdPh ? fieldOf(parentIdPh) : null;
+      if (parentFieldName) {
+        const parentPlaceholder = `{${parentIdPh}}`;
+        const parentPathTemplate = swaggerPath.substring(0, swaggerPath.indexOf(parentPlaceholder) + parentPlaceholder.length);
+        const entityPathExpr = buildPathExpr(parentPathTemplate, pathFieldMap);
+        const snapshotArg = `, { toolName: '${camelName}', id: args.${parentFieldName}, entityPath: \`${entityPathExpr}\` }`;
+        return `  return client.patch(${pathArg}, undefined${snapshotArg});`;
+      }
+      return `  return client.patch(${pathArg}, undefined);`;
     }
 
     if (action === 'change-status') {
