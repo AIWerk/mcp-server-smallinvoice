@@ -26,6 +26,7 @@ import {
   recordInvoicePaymentInput,
   changeProjectStatus,
   changeProjectStatusInput,
+  deleteInvoices,
 } from '../tools/generated.js';
 
 const TEST_TOKEN_FILE = join(tmpdir(), `si-tools-test-tokens-${process.pid}.json`);
@@ -168,6 +169,7 @@ describe('sendInvoiceByEmail', () => {
     expect((client.patch as ReturnType<typeof vi.spyOn>)).toHaveBeenCalledWith(
       '/receivables/invoices/5/send-by-email',
       expect.objectContaining({ subject: 'Invoice' }),
+      expect.objectContaining({ toolName: 'sendInvoiceByEmail', id: 5 }),
     );
   });
 });
@@ -192,5 +194,22 @@ describe('changeProjectStatus', () => {
       expect.any(Object),
       expect.objectContaining({ toolName: 'changeProjectStatus', id: 20 }),
     );
+  });
+});
+
+describe('deleteInvoices', () => {
+  it('calls client.delete with BatchSnapshotInfo for comma-separated ids', async () => {
+    const client = mockClient();
+    await deleteInvoices(client, { invoice_ids: '10,11,12' });
+    const spy = client.delete as ReturnType<typeof vi.spyOn>;
+    expect(spy).toHaveBeenCalledWith(
+      '/receivables/invoices/10,11,12',
+      expect.objectContaining({
+        toolName: 'deleteInvoices',
+        ids: ['10', '11', '12'],
+      }),
+    );
+    const snapshotInfo = spy.mock.calls[0][1] as { entityPathFn: (id: string) => string };
+    expect(snapshotInfo.entityPathFn('42')).toBe('/receivables/invoices/42');
   });
 });

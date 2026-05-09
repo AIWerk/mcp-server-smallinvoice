@@ -179,3 +179,58 @@ describe('SmallinvoiceClient config errors', () => {
     await expect(client.get('/auth/owner')).rejects.toThrow(SmallinvoiceConfigError);
   });
 });
+
+describe('SmallinvoiceClient.delete batch snapshot', () => {
+  const SNAP_DIR = join(tmpdir(), `si-snap-test-${process.pid}`);
+
+  beforeEach(() => {
+    process.env.SMALLINVOICE_DRY_RUN = '0';
+    process.env.SMALLINVOICE_NO_SNAPSHOT = '0';
+    process.env.SMALLINVOICE_SNAPSHOT_DIR = SNAP_DIR;
+  });
+
+  afterEach(() => {
+    delete process.env.SMALLINVOICE_SNAPSHOT_DIR;
+  });
+
+  it('happy path: writes batch snapshot and returns _snapshot in result', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      // GET /receivables/invoices/10
+      .mockResolvedValueOnce(new Response(JSON.stringify({ item: { id: 10 } }), { status: 200, headers: { 'content-type': 'application/json' } }))
+      // GET /receivables/invoices/11
+      .mockResolvedValueOnce(new Response(JSON.stringify({ item: { id: 11 } }), { status: 200, headers: { 'content-type': 'application/json' } }))
+      // DELETE /receivables/invoices/10,11
+      .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: 2 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+
+    const client = new SmallinvoiceClient();
+    const result = await client.delete('/receivables/invoices/10,11', {
+      toolName: 'deleteInvoices',
+      ids: ['10', '11'],
+      entityPathFn: (id) => `/receivables/invoices/${id}`,
+    }) as { _snapshot: string };
+    expect(result._snapshot).toMatch(/deleteInvoices_batch\.json$/);
+    expect(existsSync(result._snapshot)).toBe(true);
+  });
+
+  it('partial GET failure: snapshot still written, delete still executes', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      // GET /receivables/invoices/20 — succeeds
+      .mockResolvedValueOnce(new Response(JSON.stringify({ item: { id: 20 } }), { status: 200, headers: { 'content-type': 'application/json' } }))
+      // GET /receivables/invoices/21 — fails with 404
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'not found' }), { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } }))
+      // DELETE still fires
+      .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: 1 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+
+    const client = new SmallinvoiceClient();
+    const result = await client.delete('/receivables/invoices/20,21', {
+      toolName: 'deleteInvoices',
+      ids: ['20', '21'],
+      entityPathFn: (id) => `/receivables/invoices/${id}`,
+    }) as { deleted: number; _snapshot: string };
+    // Delete still proceeded
+    expect(result.deleted).toBe(1);
+    // Snapshot was written despite partial GET failure
+    expect(result._snapshot).toBeDefined();
+    expect(existsSync(result._snapshot)).toBe(true);
+  });
+});

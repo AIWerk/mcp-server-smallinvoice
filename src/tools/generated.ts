@@ -100,14 +100,14 @@ export const deleteProductCategoriesInput = z.object({
   category_ids: z.string().describe('comma separated category IDs'),
 });
 export async function deleteProductCategories(client: SmallinvoiceClient, args: z.infer<typeof deleteProductCategoriesInput>): Promise<unknown> {
-  return client.delete(`/catalog/products/categories/${args.category_ids}`);
+  return client.delete(`/catalog/products/categories/${args.category_ids}`, { toolName: 'deleteProductCategories', ids: String(args.category_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/catalog/products/categories/${id}` });
 }
 
 export const deleteServiceCategoriesInput = z.object({
   category_ids: z.string().describe('comma separated category IDs'),
 });
 export async function deleteServiceCategories(client: SmallinvoiceClient, args: z.infer<typeof deleteServiceCategoriesInput>): Promise<unknown> {
-  return client.delete(`/catalog/services/categories/${args.category_ids}`);
+  return client.delete(`/catalog/services/categories/${args.category_ids}`, { toolName: 'deleteServiceCategories', ids: String(args.category_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/catalog/services/categories/${id}` });
 }
 
 export const listUnitsInput = z.object({
@@ -192,7 +192,7 @@ export const deleteProductsInput = z.object({
   product_ids: z.string().describe('comma separated product IDs'),
 });
 export async function deleteProducts(client: SmallinvoiceClient, args: z.infer<typeof deleteProductsInput>): Promise<unknown> {
-  return client.delete(`/catalog/products/${args.product_ids}`);
+  return client.delete(`/catalog/products/${args.product_ids}`, { toolName: 'deleteProducts', ids: String(args.product_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/catalog/products/${id}` });
 }
 
 export const listServicesInput = z.object({
@@ -255,7 +255,7 @@ export const deleteServicesInput = z.object({
   service_ids: z.string().describe('comma separated service IDs'),
 });
 export async function deleteServices(client: SmallinvoiceClient, args: z.infer<typeof deleteServicesInput>): Promise<unknown> {
-  return client.delete(`/catalog/services/${args.service_ids}`);
+  return client.delete(`/catalog/services/${args.service_ids}`, { toolName: 'deleteServices', ids: String(args.service_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/catalog/services/${id}` });
 }
 
 // ========== CONFIGURATION ==========
@@ -312,7 +312,7 @@ export const deleteBankAccountsInput = z.object({
   accounts_ids: z.string().describe('comma separated IDs of accounts to be deleted'),
 });
 export async function deleteBankAccounts(client: SmallinvoiceClient, args: z.infer<typeof deleteBankAccountsInput>): Promise<unknown> {
-  return client.delete(`/configuration/bank-accounts/${args.accounts_ids}`);
+  return client.delete(`/configuration/bank-accounts/${args.accounts_ids}`, { toolName: 'deleteBankAccounts', ids: String(args.accounts_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/configuration/bank-accounts/${id}` });
 }
 
 export const listExchangeRatesInput = z.object({
@@ -357,7 +357,7 @@ export const deleteExchangeRatesInput = z.object({
   exchange_ids: z.string().describe('comma separated IDs of currency exchange rates to be deleted'),
 });
 export async function deleteExchangeRates(client: SmallinvoiceClient, args: z.infer<typeof deleteExchangeRatesInput>): Promise<unknown> {
-  return client.delete(`/configuration/exchange-rates/${args.exchange_ids}`);
+  return client.delete(`/configuration/exchange-rates/${args.exchange_ids}`, { toolName: 'deleteExchangeRates', ids: String(args.exchange_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/configuration/exchange-rates/${id}` });
 }
 
 // ========== CONTACTS ==========
@@ -417,7 +417,7 @@ export const deleteContactAccountsInput = z.object({
   accounts_ids: z.string().describe('accounts IDs (comma separated)'),
 });
 export async function deleteContactAccounts(client: SmallinvoiceClient, args: z.infer<typeof deleteContactAccountsInput>): Promise<unknown> {
-  return client.delete(`/contacts/${args.contact_id}/accounts/${args.accounts_ids}`);
+  return client.delete(`/contacts/${args.contact_id}/accounts/${args.accounts_ids}`, { toolName: 'deleteContactAccounts', ids: String(args.accounts_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/${args.contact_id}/accounts/${id}` });
 }
 
 export const listContactAddressesInput = z.object({
@@ -483,7 +483,7 @@ export const deleteContactAddressesInput = z.object({
   addresses_ids: z.string().describe('addresses IDs (comma separated)'),
 });
 export async function deleteContactAddresses(client: SmallinvoiceClient, args: z.infer<typeof deleteContactAddressesInput>): Promise<unknown> {
-  return client.delete(`/contacts/${args.contact_id}/addresses/${args.addresses_ids}`);
+  return client.delete(`/contacts/${args.contact_id}/addresses/${args.addresses_ids}`, { toolName: 'deleteContactAddresses', ids: String(args.addresses_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/${args.contact_id}/addresses/${id}` });
 }
 
 export const listContactGroupsInput = z.object({
@@ -526,7 +526,7 @@ export const deleteContactGroupsInput = z.object({
   groups_ids: z.string().describe('groups IDs (comma separated)'),
 });
 export async function deleteContactGroups(client: SmallinvoiceClient, args: z.infer<typeof deleteContactGroupsInput>): Promise<unknown> {
-  return client.delete(`/contacts/configuration/groups/${args.groups_ids}`);
+  return client.delete(`/contacts/configuration/groups/${args.groups_ids}`, { toolName: 'deleteContactGroups', ids: String(args.groups_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/configuration/groups/${id}` });
 }
 
 export const listContactsInput = z.object({
@@ -618,7 +618,7 @@ export const deleteContactsInput = z.object({
   contact_ids: z.string().describe('comma separated contact IDs'),
 });
 export async function deleteContacts(client: SmallinvoiceClient, args: z.infer<typeof deleteContactsInput>): Promise<unknown> {
-  return client.delete(`/contacts/${args.contact_ids}`);
+  return client.delete(`/contacts/${args.contact_ids}`, { toolName: 'deleteContacts', ids: String(args.contact_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/${id}` });
 }
 
 export const assignContactGroupsInput = z.object({
@@ -732,7 +732,7 @@ export const sendLetterByPostInput = z.object({
 });
 export async function sendLetterByPost(client: SmallinvoiceClient, args: z.infer<typeof sendLetterByPostInput>): Promise<unknown> {
   const { letter_id, ...body } = args;
-  return client.patch(`/contacts/letters/${args.letter_id}/send-by-post`, body);
+  return client.patch(`/contacts/letters/${args.letter_id}/send-by-post`, body, { toolName: 'sendLetterByPost', id: args.letter_id, entityPath: `/contacts/letters/${args.letter_id}` });
 }
 
 export const sendLetterByEmailInput = z.object({
@@ -744,14 +744,14 @@ export const sendLetterByEmailInput = z.object({
 });
 export async function sendLetterByEmail(client: SmallinvoiceClient, args: z.infer<typeof sendLetterByEmailInput>): Promise<unknown> {
   const { letter_id, ...body } = args;
-  return client.patch(`/contacts/letters/${args.letter_id}/send-by-email`, body);
+  return client.patch(`/contacts/letters/${args.letter_id}/send-by-email`, body, { toolName: 'sendLetterByEmail', id: args.letter_id, entityPath: `/contacts/letters/${args.letter_id}` });
 }
 
 export const deleteLettersInput = z.object({
   letter_ids: z.string().describe('comma separated letter IDs'),
 });
 export async function deleteLetters(client: SmallinvoiceClient, args: z.infer<typeof deleteLettersInput>): Promise<unknown> {
-  return client.delete(`/contacts/letters/${args.letter_ids}`);
+  return client.delete(`/contacts/letters/${args.letter_ids}`, { toolName: 'deleteLetters', ids: String(args.letter_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/letters/${id}` });
 }
 
 export const listContactPeopleInput = z.object({
@@ -823,7 +823,7 @@ export const deleteContactPeopleInput = z.object({
   people_ids: z.string().describe('people IDs (comma separated)'),
 });
 export async function deleteContactPeople(client: SmallinvoiceClient, args: z.infer<typeof deleteContactPeopleInput>): Promise<unknown> {
-  return client.delete(`/contacts/${args.contact_id}/people/${args.people_ids}`);
+  return client.delete(`/contacts/${args.contact_id}/people/${args.people_ids}`, { toolName: 'deleteContactPeople', ids: String(args.people_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/${args.contact_id}/people/${id}` });
 }
 
 export const listRemindersInput = z.object({
@@ -876,7 +876,7 @@ export const deleteRemindersInput = z.object({
   reminders_ids: z.string().describe('reminders IDs (comma separated)'),
 });
 export async function deleteReminders(client: SmallinvoiceClient, args: z.infer<typeof deleteRemindersInput>): Promise<unknown> {
-  return client.delete(`/contacts/reminders/${args.reminders_ids}`);
+  return client.delete(`/contacts/reminders/${args.reminders_ids}`, { toolName: 'deleteReminders', ids: String(args.reminders_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/contacts/reminders/${id}` });
 }
 
 // ========== RECEIVABLES ==========
@@ -1008,7 +1008,7 @@ export const sendDeliveryNoteByPostInput = z.object({
 });
 export async function sendDeliveryNoteByPost(client: SmallinvoiceClient, args: z.infer<typeof sendDeliveryNoteByPostInput>): Promise<unknown> {
   const { delivery_note_id, ...body } = args;
-  return client.patch(`/receivables/delivery-notes/${args.delivery_note_id}/send-by-post`, body);
+  return client.patch(`/receivables/delivery-notes/${args.delivery_note_id}/send-by-post`, body, { toolName: 'sendDeliveryNoteByPost', id: args.delivery_note_id, entityPath: `/receivables/delivery-notes/${args.delivery_note_id}` });
 }
 
 export const sendDeliveryNoteByEmailInput = z.object({
@@ -1020,14 +1020,14 @@ export const sendDeliveryNoteByEmailInput = z.object({
 });
 export async function sendDeliveryNoteByEmail(client: SmallinvoiceClient, args: z.infer<typeof sendDeliveryNoteByEmailInput>): Promise<unknown> {
   const { delivery_note_id, ...body } = args;
-  return client.patch(`/receivables/delivery-notes/${args.delivery_note_id}/send-by-email`, body);
+  return client.patch(`/receivables/delivery-notes/${args.delivery_note_id}/send-by-email`, body, { toolName: 'sendDeliveryNoteByEmail', id: args.delivery_note_id, entityPath: `/receivables/delivery-notes/${args.delivery_note_id}` });
 }
 
 export const deleteDeliveryNotesInput = z.object({
   delivery_note_ids: z.string().describe('comma separated delivery note IDs'),
 });
 export async function deleteDeliveryNotes(client: SmallinvoiceClient, args: z.infer<typeof deleteDeliveryNotesInput>): Promise<unknown> {
-  return client.delete(`/receivables/delivery-notes/${args.delivery_note_ids}`);
+  return client.delete(`/receivables/delivery-notes/${args.delivery_note_ids}`, { toolName: 'deleteDeliveryNotes', ids: String(args.delivery_note_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/receivables/delivery-notes/${id}` });
 }
 
 export const listInvoicesInput = z.object({
@@ -1164,7 +1164,7 @@ export const sendInvoiceByPostInput = z.object({
 });
 export async function sendInvoiceByPost(client: SmallinvoiceClient, args: z.infer<typeof sendInvoiceByPostInput>): Promise<unknown> {
   const { invoice_id, ...body } = args;
-  return client.patch(`/receivables/invoices/${args.invoice_id}/send-by-post`, body);
+  return client.patch(`/receivables/invoices/${args.invoice_id}/send-by-post`, body, { toolName: 'sendInvoiceByPost', id: args.invoice_id, entityPath: `/receivables/invoices/${args.invoice_id}` });
 }
 
 export const sendInvoiceByEmailInput = z.object({
@@ -1177,14 +1177,14 @@ export const sendInvoiceByEmailInput = z.object({
 });
 export async function sendInvoiceByEmail(client: SmallinvoiceClient, args: z.infer<typeof sendInvoiceByEmailInput>): Promise<unknown> {
   const { invoice_id, ...body } = args;
-  return client.patch(`/receivables/invoices/${args.invoice_id}/send-by-email`, body);
+  return client.patch(`/receivables/invoices/${args.invoice_id}/send-by-email`, body, { toolName: 'sendInvoiceByEmail', id: args.invoice_id, entityPath: `/receivables/invoices/${args.invoice_id}` });
 }
 
 export const deleteInvoicesInput = z.object({
   invoice_ids: z.string().describe('comma separated invoice IDs'),
 });
 export async function deleteInvoices(client: SmallinvoiceClient, args: z.infer<typeof deleteInvoicesInput>): Promise<unknown> {
-  return client.delete(`/receivables/invoices/${args.invoice_ids}`);
+  return client.delete(`/receivables/invoices/${args.invoice_ids}`, { toolName: 'deleteInvoices', ids: String(args.invoice_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/receivables/invoices/${id}` });
 }
 
 export const listOffersInput = z.object({
@@ -1298,7 +1298,7 @@ export const sendOfferByPostInput = z.object({
 });
 export async function sendOfferByPost(client: SmallinvoiceClient, args: z.infer<typeof sendOfferByPostInput>): Promise<unknown> {
   const { offer_id, ...body } = args;
-  return client.patch(`/receivables/offers/${args.offer_id}/send-by-post`, body);
+  return client.patch(`/receivables/offers/${args.offer_id}/send-by-post`, body, { toolName: 'sendOfferByPost', id: args.offer_id, entityPath: `/receivables/offers/${args.offer_id}` });
 }
 
 export const sendOfferByEmailInput = z.object({
@@ -1310,14 +1310,14 @@ export const sendOfferByEmailInput = z.object({
 });
 export async function sendOfferByEmail(client: SmallinvoiceClient, args: z.infer<typeof sendOfferByEmailInput>): Promise<unknown> {
   const { offer_id, ...body } = args;
-  return client.patch(`/receivables/offers/${args.offer_id}/send-by-email`, body);
+  return client.patch(`/receivables/offers/${args.offer_id}/send-by-email`, body, { toolName: 'sendOfferByEmail', id: args.offer_id, entityPath: `/receivables/offers/${args.offer_id}` });
 }
 
 export const deleteOffersInput = z.object({
   offer_ids: z.string().describe('comma separated offer IDs'),
 });
 export async function deleteOffers(client: SmallinvoiceClient, args: z.infer<typeof deleteOffersInput>): Promise<unknown> {
-  return client.delete(`/receivables/offers/${args.offer_ids}`);
+  return client.delete(`/receivables/offers/${args.offer_ids}`, { toolName: 'deleteOffers', ids: String(args.offer_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/receivables/offers/${id}` });
 }
 
 export const listOrderConfirmationsInput = z.object({
@@ -1427,7 +1427,7 @@ export const sendOrderConfirmationByPostInput = z.object({
 });
 export async function sendOrderConfirmationByPost(client: SmallinvoiceClient, args: z.infer<typeof sendOrderConfirmationByPostInput>): Promise<unknown> {
   const { order_confirmation_id, ...body } = args;
-  return client.patch(`/receivables/order-confirmations/${args.order_confirmation_id}/send-by-post`, body);
+  return client.patch(`/receivables/order-confirmations/${args.order_confirmation_id}/send-by-post`, body, { toolName: 'sendOrderConfirmationByPost', id: args.order_confirmation_id, entityPath: `/receivables/order-confirmations/${args.order_confirmation_id}` });
 }
 
 export const sendOrderConfirmationByEmailInput = z.object({
@@ -1439,14 +1439,14 @@ export const sendOrderConfirmationByEmailInput = z.object({
 });
 export async function sendOrderConfirmationByEmail(client: SmallinvoiceClient, args: z.infer<typeof sendOrderConfirmationByEmailInput>): Promise<unknown> {
   const { order_confirmation_id, ...body } = args;
-  return client.patch(`/receivables/order-confirmations/${args.order_confirmation_id}/send-by-email`, body);
+  return client.patch(`/receivables/order-confirmations/${args.order_confirmation_id}/send-by-email`, body, { toolName: 'sendOrderConfirmationByEmail', id: args.order_confirmation_id, entityPath: `/receivables/order-confirmations/${args.order_confirmation_id}` });
 }
 
 export const deleteOrderConfirmationsInput = z.object({
   order_confirmation_ids: z.string().describe('comma separated order confirmation IDs'),
 });
 export async function deleteOrderConfirmations(client: SmallinvoiceClient, args: z.infer<typeof deleteOrderConfirmationsInput>): Promise<unknown> {
-  return client.delete(`/receivables/order-confirmations/${args.order_confirmation_ids}`);
+  return client.delete(`/receivables/order-confirmations/${args.order_confirmation_ids}`, { toolName: 'deleteOrderConfirmations', ids: String(args.order_confirmation_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/receivables/order-confirmations/${id}` });
 }
 
 export const listInvoicePaymentsInput = z.object({
@@ -1500,7 +1500,7 @@ export const deleteInvoicePaymentInput = z.object({
   payment_ids: z.string().describe('payment IDs (comma separated)'),
 });
 export async function deleteInvoicePayment(client: SmallinvoiceClient, args: z.infer<typeof deleteInvoicePaymentInput>): Promise<unknown> {
-  return client.delete(`/receivables/invoices/${args.invoice_id}/payments/${args.payment_ids}`);
+  return client.delete(`/receivables/invoices/${args.invoice_id}/payments/${args.payment_ids}`, { toolName: 'deleteInvoicePayment', ids: String(args.payment_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/receivables/invoices/${args.invoice_id}/payments/${id}` });
 }
 
 // ========== REPORTING ==========
@@ -1569,7 +1569,7 @@ export const deleteCostUnitsInput = z.object({
   cost_unit_ids: z.string().describe('comma separated cost unit IDs'),
 });
 export async function deleteCostUnits(client: SmallinvoiceClient, args: z.infer<typeof deleteCostUnitsInput>): Promise<unknown> {
-  return client.delete(`/reporting/cost-units/${args.cost_unit_ids}`);
+  return client.delete(`/reporting/cost-units/${args.cost_unit_ids}`, { toolName: 'deleteCostUnits', ids: String(args.cost_unit_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/reporting/cost-units/${id}` });
 }
 
 export const listEffortsInput = z.object({
@@ -1624,7 +1624,7 @@ export const deleteEffortsInput = z.object({
   effort_ids: z.string().describe('efforts IDs (comma separated)'),
 });
 export async function deleteEfforts(client: SmallinvoiceClient, args: z.infer<typeof deleteEffortsInput>): Promise<unknown> {
-  return client.delete(`/reporting/efforts/${args.effort_ids}`);
+  return client.delete(`/reporting/efforts/${args.effort_ids}`, { toolName: 'deleteEfforts', ids: String(args.effort_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/reporting/efforts/${id}` });
 }
 
 export const listProjectsInput = z.object({
@@ -1688,7 +1688,7 @@ export const deleteProjectsInput = z.object({
   project_ids: z.string().describe('projects IDs (comma separated)'),
 });
 export async function deleteProjects(client: SmallinvoiceClient, args: z.infer<typeof deleteProjectsInput>): Promise<unknown> {
-  return client.delete(`/reporting/projects/${args.project_ids}`);
+  return client.delete(`/reporting/projects/${args.project_ids}`, { toolName: 'deleteProjects', ids: String(args.project_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/reporting/projects/${id}` });
 }
 
 export const listWorkingHoursInput = z.object({
@@ -1737,7 +1737,7 @@ export const deleteWorkingHoursInput = z.object({
   time_ids: z.string().describe('working hours IDs (comma separated)'),
 });
 export async function deleteWorkingHours(client: SmallinvoiceClient, args: z.infer<typeof deleteWorkingHoursInput>): Promise<unknown> {
-  return client.delete(`/reporting/working-hours/${args.time_ids}`);
+  return client.delete(`/reporting/working-hours/${args.time_ids}`, { toolName: 'deleteWorkingHours', ids: String(args.time_ids).split(',').map(s => s.trim()).filter(Boolean), entityPathFn: (id) => `/reporting/working-hours/${id}` });
 }
 
 // All tool definitions for server registration

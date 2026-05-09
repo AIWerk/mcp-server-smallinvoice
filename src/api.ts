@@ -226,6 +226,40 @@ async function saveSnapshot(entityPath: string, toolName: string, id: string | n
   }
 }
 
+export interface BatchSnapshotInfo {
+  toolName: string;
+  ids: (string | number)[];
+  entityPathFn: (id: string | number) => string;
+}
+
+// Save pre-delete snapshots for each entity in a batch operation.
+// Partial failures are recorded in the snapshot (not thrown) so the delete still proceeds.
+async function saveBatchSnapshot(info: BatchSnapshotInfo): Promise<string | null> {
+  if (!isSnapshotEnabled()) return null;
+  try {
+    const entries = await Promise.all(
+      info.ids.map(async (id) => {
+        try {
+          const { data } = await fetchWithAuth('GET', info.entityPathFn(id));
+          return { id, data };
+        } catch (e) {
+          return { id, error: e instanceof Error ? e.message : String(e) };
+        }
+      }),
+    );
+    const dir = snapshotDir();
+    mkdirSync(dir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${ts}_${info.toolName}_batch.json`;
+    const filePath = join(dir, filename);
+    writeFileSync(filePath, JSON.stringify({ tool: info.toolName, ids: info.ids, entries }, null, 2), { mode: 0o600 });
+    return filePath;
+  } catch (err) {
+    console.error(`[mcp-server-smallinvoice] batch snapshot failed for ${info.toolName}: ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
+
 export interface PdfResult {
   path: string;
   sizeBytes: number;
@@ -276,11 +310,18 @@ export class SmallinvoiceClient {
     return data as T;
   }
 
-  async delete<T = unknown>(path: string): Promise<T> {
+  async delete<T = unknown>(path: string, snapshotInfo?: BatchSnapshotInfo): Promise<T> {
     if (isDryRun()) {
       return { _dry_run: true, _would_call: { method: 'DELETE', path } } as unknown as T;
     }
+    let snapshotPath: string | null = null;
+    if (snapshotInfo) {
+      snapshotPath = await saveBatchSnapshot(snapshotInfo);
+    }
     const { data } = await fetchWithAuth('DELETE', path);
+    if (snapshotPath) {
+      return { ...(typeof data === 'object' && data !== null ? data as object : { result: data }), _snapshot: snapshotPath } as unknown as T;
+    }
     return data as T;
   }
 

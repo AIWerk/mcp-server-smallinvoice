@@ -194,7 +194,24 @@ function buildClientCall(op, swaggerPath, method, pathParams, queryParams, hasBo
   }
 
   if (method === 'DELETE') {
-    return `  return client.delete(${pathArg});`;
+    if (pathParams.length === 0) {
+      return `  return client.delete(${pathArg});`;
+    }
+    const lastPh = pathParams[pathParams.length - 1];
+    const isPlural = /ids$/i.test(lastPh) && lastPh.toLowerCase() !== 'ids';
+    const lastFieldName = fieldOf(lastPh);
+    // Build entity path template: last placeholder → ${id}, preceding ones → ${args.field}
+    const entityPathTemplate = swaggerPath.replace(/\{([^}]+)\}/g, (_, ph) => {
+      if (ph === lastPh) return '${id}';
+      return `\${args.${fieldOf(ph)}}`;
+    });
+    const idsExpr = isPlural
+      ? `String(args.${lastFieldName}).split(',').map(s => s.trim()).filter(Boolean)`
+      : `[args.${lastFieldName}]`;
+    // Use string concatenation to avoid premature template-literal expansion in the codegen
+    const entityPathFnStr = '(id) => `' + entityPathTemplate + '`';
+    const snapshotArg = `{ toolName: '${camelName}', ids: ${idsExpr}, entityPathFn: ${entityPathFnStr} }`;
+    return `  return client.delete(${pathArg}, ${snapshotArg});`;
   }
 
   if (method === 'POST') {
@@ -235,10 +252,17 @@ function buildClientCall(op, swaggerPath, method, pathParams, queryParams, hasBo
     }
 
     if (action === 'send-by-email' || action === 'send-by-post') {
+      const idPh = pathParams.find(p => p.endsWith('Id'));
+      const snakeId = idPh ? fieldOf(idPh) : null;
+      const entityBasePath = swaggerPath.replace(/\/send-by-(email|post).*$/, '');
+      const entityPathExpr = buildPathExpr(entityBasePath, pathFieldMap);
+      const snapshotArg = snakeId
+        ? `, { toolName: '${camelName}', id: args.${snakeId}, entityPath: \`${entityPathExpr}\` }`
+        : '';
       if (pathParams.length === 0) {
-        return `  return client.patch(${pathArg}, args);`;
+        return `  return client.patch(${pathArg}, args${snapshotArg});`;
       }
-      return `  const { ${pathFieldNames.join(', ')}, ...body } = args;\n  return client.patch(${pathArg}, body);`;
+      return `  const { ${pathFieldNames.join(', ')}, ...body } = args;\n  return client.patch(${pathArg}, body${snapshotArg});`;
     }
 
     // Generic PATCH
