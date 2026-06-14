@@ -323,3 +323,51 @@ describe('SmallinvoiceClient.delete batch snapshot', () => {
     expect(existsSync(result._snapshot)).toBe(true);
   });
 });
+
+describe('SmallinvoiceClient.getPdf', () => {
+  const PDF_BYTES = Buffer.from('%PDF-1.4 fake invoice bytes');
+
+  function mockPdfResponse() {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Uint8Array(PDF_BYTES), {
+        status: 200,
+        headers: { 'content-type': 'application/pdf' },
+      }),
+    );
+  }
+
+  afterEach(() => {
+    delete process.env.AIWERK_PDF_RETURN_BASE64;
+  });
+
+  it('writes a temp file and returns its path by default (standalone mode)', async () => {
+    delete process.env.AIWERK_PDF_RETURN_BASE64;
+    mockPdfResponse();
+    const client = new SmallinvoiceClient();
+    const res = await client.getPdf('/receivables/invoices/42/pdf', 42) as {
+      path: string; sizeBytes: number; mimeType: string;
+    };
+    expect(res.path).toMatch(/\.pdf$/);
+    expect(existsSync(res.path)).toBe(true);
+    expect(res.sizeBytes).toBe(PDF_BYTES.byteLength);
+    expect(res.mimeType).toBe('application/pdf');
+    expect(readFileSync(res.path)).toEqual(PDF_BYTES);
+    expect(res).not.toHaveProperty('contentBase64');
+    try { unlinkSync(res.path); } catch { /* */ }
+  });
+
+  it('returns base64 content (no temp file) when AIWERK_PDF_RETURN_BASE64=1 (hosted mode)', async () => {
+    process.env.AIWERK_PDF_RETURN_BASE64 = '1';
+    mockPdfResponse();
+    const client = new SmallinvoiceClient();
+    const res = await client.getPdf('/receivables/invoices/42/pdf', 42) as {
+      filename: string; sizeBytes: number; mimeType: string; contentBase64: string;
+    };
+    expect(res).not.toHaveProperty('path');
+    expect(res.filename).toMatch(/\.pdf$/);
+    expect(res.sizeBytes).toBe(PDF_BYTES.byteLength);
+    expect(res.mimeType).toBe('application/pdf');
+    // base64 round-trips back to the exact bytes
+    expect(Buffer.from(res.contentBase64, 'base64')).toEqual(PDF_BYTES);
+  });
+});

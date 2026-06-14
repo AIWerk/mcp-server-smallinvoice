@@ -1,6 +1,6 @@
 {
   "name": "@aiwerk/mcp-server-smallinvoice",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "smallinvoice.ch API MCP server — Swiss SME invoicing and accounting (146 tools, OAuth2 BYOC)",
   "type": "module",
   "main": "dist/src/server.js",

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-06-14
+
+### Added
+- `getPdf` hosted-bridge mode: when `AIWERK_PDF_RETURN_BASE64=1` is set in the environment, the five `download_*_pdf` tools (invoice, offer, delivery-note, letter, order-confirmation) return the PDF inline as base64 (`{filename, mimeType, sizeBytes, contentBase64}`) instead of writing a temp file and returning a container-internal path. This lets the AIWerk hosted bridge re-host the bytes behind a one-time download URL. Standalone installs (no env flag) keep the existing temp-file behavior.
+- 2 new tests for `getPdf` (temp-file default + base64 hosted mode), 217 total.
+
 ## [0.1.0] — 2026-05-09
 
 ### Added

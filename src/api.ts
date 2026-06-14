@@ -287,11 +287,20 @@ async function saveBatchSnapshot(info: BatchSnapshotInfo): Promise<string> {
   }
 }
 
-export interface PdfResult {
+export interface PdfFileResult {
   path: string;
   sizeBytes: number;
   mimeType: string;
 }
+
+export interface PdfBase64Result {
+  filename: string;
+  sizeBytes: number;
+  mimeType: string;
+  contentBase64: string;
+}
+
+export type PdfResult = PdfFileResult | PdfBase64Result;
 
 export class SmallinvoiceClient {
   async get<T = unknown>(path: string, query?: Query): Promise<T> {
@@ -367,9 +376,22 @@ export class SmallinvoiceClient {
     const { data, headers } = await fetchWithAuth('GET', path, undefined, undefined, true);
     const buf = data as ArrayBuffer;
     const mimeType = headers.get('content-type') ?? 'application/pdf';
-    const dir = tmpdir();
     const filename = `smallinvoice-${path.replace(/\//g, '-').replace(/^-/, '')}-${id}.pdf`;
-    const filePath = join(dir, filename);
+
+    // Hosted-bridge mode: the bridge injects AIWERK_PDF_RETURN_BASE64=1 and
+    // re-hosts the bytes behind a one-time URL, so we hand back the content
+    // inline (base64) instead of a container-internal temp path the user
+    // could never reach. Standalone installs keep the temp-file behavior.
+    if (process.env.AIWERK_PDF_RETURN_BASE64 === '1') {
+      return {
+        filename,
+        sizeBytes: buf.byteLength,
+        mimeType,
+        contentBase64: Buffer.from(buf).toString('base64'),
+      };
+    }
+
+    const filePath = join(tmpdir(), filename);
     writeFileSync(filePath, Buffer.from(buf));
     return { path: filePath, sizeBytes: buf.byteLength, mimeType };
   }
